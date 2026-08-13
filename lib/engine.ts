@@ -20,7 +20,13 @@ export const FIXED = {
   kdAT: 0.04,
   omEsc: 0.02,
   A: { cap: 5000, deg: 0.005, omKwp: 25, opp: 1e5, salv: 0.05, life: 25, invFrac: 0.08, invYr: 12, wc: 0 },
-  B: { gwh: 100, capex: 48e6, om: 3e5, salv: 0.02, life: 12, wc: 5e5 },
+  // B capex derived from the Siemens/Etihad ESCO retrofit ESPC (2022, meconstructionnews.com/32016):
+  // 3.7-yr contract payback × base-case gross annual saving (100 GWh × 20% × AED 0.44 = AED 8.8m)
+  // = AED 32.56m. Class 2 — published benchmark, judgement applied. Caveats: mosque portfolio, not
+  // a mall (different load profile/hours); cost inferred from stated payback, may embed ESCO
+  // financing margin; source dated 2022. The contract's 20.43% guaranteed saving independently
+  // corroborates the 20% efficiency assumption from a separate Etihad ESCO contract.
+  B: { gwh: 100, capex: 32.56e6, om: 3e5, salv: 0.02, life: 12, wc: 5e5 },
 } as const;
 
 export const BASE: Params = {

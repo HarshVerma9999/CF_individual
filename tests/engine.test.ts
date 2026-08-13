@@ -17,14 +17,19 @@ describe("Option A — golden values vs Python engine", () => {
   it("initial outlay", () => expect(R.A.outlay).toBe(9_000_000));
 });
 
-describe("Option B — golden values vs Python engine", () => {
+describe("Option B — golden values vs independent first-principles recomputation", () => {
+  // Capex AED 32.56m = 3.7-yr ESPC payback (Siemens/Etihad ESCO retrofit, 2022) × gross saving 8.8m.
+  // Expected values recomputed independently in scratchpad/independent_check (fresh arithmetic).
   const R = run(BASE);
-  it("NPV", () => expect(R.mB.npv).toBeCloseTo(-25888802.5176, 2));
-  it("IRR", () => expect(R.mB.irr!).toBeCloseTo(-0.03564392533, 7));
-  it("PI", () => expect(R.mB.pi).toBeCloseTo(0.46621025737, 8));
-  it("payback never recovers", () => expect(R.mB.pay).toBeNull());
-  it("EAA", () => expect(R.mB.eaa).toBeCloseTo(-3506847.2418, 2));
-  it("initial outlay includes spare-parts WC", () => expect(R.B.outlay).toBe(48_500_000));
+  it("NPV", () => expect(R.mB.npv).toBeCloseTo(-11403889.59, 1));
+  it("IRR", () => expect(R.mB.irr!).toBeCloseTo(0.01242355, 7));
+  it("PI", () => expect(R.mB.pi).toBeCloseTo(0.65505476, 7));
+  it("payback recovers undiscounted in yr ~11.3; discounted never", () => {
+    expect(R.mB.pay!).toBeCloseTo(11.3183429, 6);
+    expect(R.mB.dpay).toBeNull();
+  });
+  it("EAA", () => expect(R.mB.eaa).toBeCloseTo(-1544748.88, 1));
+  it("initial outlay includes spare-parts WC", () => expect(R.B.outlay).toBe(33_060_000));
 });
 
 describe("Switching values — golden values vs Python engine", () => {
@@ -32,14 +37,14 @@ describe("Switching values — golden values vs Python engine", () => {
   it("capex A", () => expect(switching("capexA", "A", 0.5, 6, BASE)!).toBeCloseTo(3.090001, 4));
   it("tariff", () => expect(switching("tariff", "A", 0.05, 1.2, BASE)!).toBeCloseTo(0.282192, 4));
   it("yield", () => expect(switching("yield_", "A", 400, 2400, BASE)!).toBeCloseTo(1058.22, 1));
-  it("retention B", () => expect(switching("retB", "B", 0.05, 0.95, BASE)!).toBeCloseTo(0.768282, 4));
+  it("retention B", () => expect(switching("retB", "B", 0.05, 0.95, BASE)!).toBeCloseTo(0.5343, 3));
 });
 
 describe("Convention deliverables (signed-off spec)", () => {
   const R = run(BASE);
-  it("ARR footnote variant — initial-investment basis (golden vs Python engine)", () => {
+  it("ARR footnote variant — initial-investment basis", () => {
     expect(R.mA.arrInitial).toBeCloseTo(0.1282031734, 8);
-    expect(R.mB.arrInitial).toBeCloseTo(-0.0187652595, 8);
+    expect(R.mB.arrInitial).toBeCloseTo(0.00717889, 7);
   });
   it("MIRR three conventions: split = single when no interim CF is negative", () => {
     expect(R.mA.mirr).toBeCloseTo(R.mA.mirrSingle, 10);

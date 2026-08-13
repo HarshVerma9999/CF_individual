@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { analyze, BASE, npvADecliningBalance, type Params } from "@/lib/engine";
+import { analyze, BASE, FIXED, npvADecliningBalance, type Params } from "@/lib/engine";
 import { buildPayload } from "@/lib/engine";
 import { Tornado, Timeline, Waterfall } from "@/components/charts";
 import { AiPanel } from "@/components/AiPanel";
@@ -151,8 +151,14 @@ export default function Home() {
             <SliderRow label="Efficiency gain" badge={2} value={p.eff} min={0.1} max={0.3} step={0.01}
               display={`${Math.round(p.eff * 100)}% of load`} src="Etihad ESCO Dubai Maritime City analogue (20%)"
               onChange={set("eff")} />
-            <div className="static-row"><span>Capex <span className="badge c2">Class 2</span></span><span className="val num">AED 48.0m</span></div>
-            <div className="static-row"><span>Mall consumption <span className="badge c3">Class 3</span></span><span className="val num">100 GWh/yr</span></div>
+            <div className="static-row" title="Derived: 3.7-yr ESPC payback (Siemens/Etihad ESCO mosque retrofit, 2022) × base gross saving AED 8.8m. Caveats: mosque portfolio, not a mall; cost inferred from stated payback (may embed ESCO financing margin); 2022 source.">
+              <span>Capex <span className="badge c2">Class 2</span></span>
+              <span className="val num">AED {(FIXED.B.capex / 1e6).toFixed(2)}m</span>
+            </div>
+            <div className="static-row" title="UNSOURCED whole-building estimate. Not directly derivable from MAF's 2024 Environmental Data Annex, which discloses landlord shared-services consumption only (29 malls: 183.9 GWh electricity + 181.6 GWh(th) chilled water, 2024; landlord electricity intensity 275 kWh/m²/yr).">
+              <span>Mall consumption <span className="badge c3">Class 3 · unsourced</span></span>
+              <span className="val num">100 GWh/yr</span>
+            </div>
           </div>
 
           <div className="igroup">
@@ -452,8 +458,9 @@ export default function Home() {
                   <tr><td>Effective tariff</td><td className="num">AED 0.440/kWh</td><td><span className="badge c1">1</span></td><td>DEWA published schedule + Aug-26 fuel surcharge; ESCO cross-check 0.445</td></tr>
                   <tr><td>Specific yield</td><td className="num">1,650 kWh/kWp</td><td><span className="badge c2">2</span></td><td>Global Solar Atlas, rooftop-derated</td></tr>
                   <tr><td>Solar capex</td><td className="num">AED 1.80/Wp</td><td><span className="badge c2">2</span></td><td>UAE installer range — widest sensitivity band</td></tr>
-                  <tr><td>Chiller capex</td><td className="num">AED 48m</td><td><span className="badge c2">2/3</span></td><td>Independent $/RT anchor; ESPC back-solve as cross-check only</td></tr>
+                  <tr><td>Chiller retrofit capex</td><td className="num">AED {(FIXED.B.capex / 1e6).toFixed(2)}m</td><td><span className="badge c2">2</span></td><td>3.7-yr ESPC payback (Siemens/Etihad ESCO retrofit, 2022) × gross saving AED 8.8m. Caveats: mosque load profile, not a mall; inferred from payback, may embed ESCO margin; 2022 figures. Same contract&apos;s 20.43% guaranteed saving corroborates the 20% efficiency assumption</td></tr>
                   <tr><td>Retention share A / B</td><td className="num">50% / 35%</td><td><span className="badge c3">3</span></td><td>Judgement from MAFP service-charge structure — decision-critical</td></tr>
+                  <tr><td>Mall consumption</td><td className="num">100 GWh/yr</td><td><span className="badge c3">3</span></td><td><b>Unsourced</b> whole-building estimate, flagged. MAF&apos;s 2024 Environmental Data Annex discloses landlord shared-services consumption only (29 malls: 183.9 GWh electricity + 181.6 GWh(th) chilled water; landlord intensity 275 kWh/m²/yr) — no whole-building, per-mall figure is published, and deriving one would stack three further judgements</td></tr>
                   <tr><td>WACC</td><td className="num">8.40%</td><td><span className="badge c2">2</span></td><td>MAFP FY2025 audited statements; CAPM via Hamada relever</td></tr>
                   <tr><td>Corporate tax</td><td className="num">9%</td><td><span className="badge c1">1</span></td><td>UAE Federal Decree-Law 47/2022</td></tr>
                 </tbody>

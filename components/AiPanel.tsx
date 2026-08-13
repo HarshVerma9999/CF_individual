@@ -24,7 +24,7 @@ function engineNarration(a: FullAnalysis, p: Params): Record<"verdict" | "risks"
       `The conclusion rests almost entirely on one question: how much of the electricity saving MAF actually keeps. If the Option A retention share falls below ${sw.retA == null ? "its switching value" : (sw.retA * 100).toFixed(0) + "%"}, the project destroys value — and this is the least-evidenced input in the model (Class 3). Capex, tariff and yield each carry safety margins above one-third. Verify the lease mechanics first; everything else is survivable.`,
     ),
     comparison: mk(
-      `The chillers save more electricity in year 1 (${fmtM(R.B.rows[0].gross)} gross vs ${fmtM(R.A.rows[0].gross)}) — but they cost five times more, run half as long, and their savings sit exactly where service charges pass value back to tenants. Because the lives differ (25 vs 12 years), the ranking is done on equivalent annual annuity, not raw NPV or IRR — and on that like-for-like measure solar wins in every tested configuration.`,
+      `The chillers save more electricity in year 1 (${fmtM(R.B.rows[0].gross)} gross vs ${fmtM(R.A.rows[0].gross)}) — but they cost ${(R.B.outlay / R.A.outlay).toFixed(1)}× as much, run half as long, and their savings sit exactly where service charges pass value back to tenants. Because the lives differ (25 vs 12 years), the ranking is done on equivalent annual annuity, not raw NPV or IRR${R.mA.eaa >= R.mB.eaa ? " — and on that like-for-like measure solar ranks ahead at the current assumptions" : ""}.`,
     ),
   };
 }
