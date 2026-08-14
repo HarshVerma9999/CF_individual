@@ -29,10 +29,10 @@ export function Waterfall({ R }: { R: RunResult }) {
     els.push(
       <g key={i}>
         <rect x={r2(x)} y={Math.min(y0, y1)} width={r2(bw)} height={r2(Math.max(Math.abs(y1 - y0), 2))} rx={4} fill={color} opacity={st[1] === null ? 1 : 0.85} />
-        <text className="svg-num" x={x + bw / 2} y={Math.min(y0, y1) - 6} textAnchor="middle">{(Math.abs(v) / 1e6).toFixed(2)}</text>
-        <text className="svg-label" x={x + bw / 2} y={H - 12} textAnchor="middle">{st[0]}</text>
+        <text className="svg-num" x={r2(x + bw / 2)} y={r2(Math.min(y0, y1) - 6)} textAnchor="middle">{(Math.abs(v) / 1e6).toFixed(2)}</text>
+        <text className="svg-label" x={r2(x + bw / 2)} y={H - 12} textAnchor="middle">{st[0]}</text>
         {i < steps.length - 1 && (
-          <line x1={x + bw} y1={y(cum)} x2={x + bw + 14} y2={y(cum)} stroke="var(--muted-fg)" strokeDasharray="2,2" />
+          <line x1={r2(x + bw)} y1={y(cum)} x2={r2(x + bw + 14)} y2={y(cum)} stroke="var(--muted-fg)" strokeDasharray="2,2" />
         )}
       </g>,
     );
@@ -73,8 +73,8 @@ export function Timeline({ R, p }: { R: RunResult; p: Params }) {
             <rect x={r2(x)} y={y0} width={r2(bw)} height={r2(Math.max(y1 - y0, 1.5))} rx={1.5} fill={cf < 0 ? "var(--neg)" : "var(--chart-bar)"} opacity={0.85} />
             {clipped && (
               <>
-                <line x1={x - 1.5} y1={y1 + 4} x2={x + bw + 1.5} y2={y1 + 1} stroke="var(--card)" strokeWidth={2.5} />
-                <text className="svg-num" x={x + bw + 4} y={y1 + 6} fill="var(--neg)">{(cf / 1e6).toFixed(1)}m</text>
+                <line x1={r2(x - 1.5)} y1={r2(y1 + 4)} x2={r2(x + bw + 1.5)} y2={r2(y1 + 1)} stroke="var(--card)" strokeWidth={2.5} />
+                <text className="svg-num" x={r2(x + bw + 4)} y={r2(y1 + 6)} fill="var(--neg)">{(cf / 1e6).toFixed(1)}m</text>
               </>
             )}
           </g>
@@ -83,11 +83,11 @@ export function Timeline({ R, p }: { R: RunResult; p: Params }) {
       <polyline fill="none" stroke="var(--chart-line)" strokeWidth={2} points={cum.map((v, t) => `${r2(pad + t * (bw + 2) + bw / 2)},${yv(v)}`).join(" ")} />
       {dp != null && (
         <>
-          <line x1={pad + dp * (bw + 2) + bw / 2} y1={yv(0) - 16} x2={pad + dp * (bw + 2) + bw / 2} y2={yv(0) + 16} stroke="var(--chart-line)" strokeDasharray="3,3" />
-          <text className="svg-label" x={pad + dp * (bw + 2) + bw / 2 + 4} y={yv(0) - 20} fill="var(--accent)">disc. payback {dp.toFixed(1)}y</text>
+          <line x1={r2(pad + dp * (bw + 2) + bw / 2)} y1={r2(yv(0) - 16)} x2={r2(pad + dp * (bw + 2) + bw / 2)} y2={r2(yv(0) + 16)} stroke="var(--chart-line)" strokeDasharray="3,3" />
+          <text className="svg-label" x={r2(pad + dp * (bw + 2) + bw / 2 + 4)} y={r2(yv(0) - 20)} fill="var(--accent)">disc. payback {dp.toFixed(1)}y</text>
         </>
       )}
-      <text className="svg-label" x={pad + 12 * (bw + 2)} y={H - 4} textAnchor="middle">yr 12 · inverter</text>
+      <text className="svg-label" x={r2(pad + 12 * (bw + 2))} y={H - 4} textAnchor="middle">yr 12 · inverter</text>
       <text className="svg-label" x={pad} y={12}>AED m</text>
     </svg>
   );
@@ -101,14 +101,18 @@ export function Tornado({ p }: { p: Params }) {
   ];
   const base = run(p).mA.npv;
   const W = 460, rowH = 32, H = vars.length * rowH + 44, mid = W * 0.56;
-  const res = vars.map(([lab, k]) => {
+  const res = vars.map(([lab, k], idx) => {
     const lo = { ...p, [k]: p[k] * 0.8 };
     const hi = { ...p, [k]: p[k] * 1.2 };
-    return { lab, lo: run(lo).mA.npv, hi: run(hi).mA.npv };
+    return { lab, idx, lo: run(lo).mA.npv, hi: run(hi).mA.npv };
   });
   const span = Math.max(...res.flatMap((r) => [Math.abs(r.lo - base), Math.abs(r.hi - base)]), 1);
   const sx = (v: number) => r2(mid + ((v - base) / span) * (W * 0.36));
-  res.sort((a, b) => Math.abs(b.lo - base) + Math.abs(b.hi - base) - (Math.abs(a.lo - base) + Math.abs(a.hi - base)));
+  // Sort key rounded to whole AED with a fixed tie-break: tariff/yield/retention have
+  // exactly tied swings (multiplicative symmetry), and float tails can differ between
+  // the server and client bundles — an unstable tie order is a hydration mismatch.
+  const key = (r: { lo: number; hi: number }) => Math.round(Math.abs(r.lo - base) + Math.abs(r.hi - base));
+  res.sort((a, b) => key(b) - key(a) || a.idx - b.idx);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Tornado chart of NPV sensitivity">
       <line x1={mid} y1={14} x2={mid} y2={H - 26} stroke="var(--chart-grid)" />

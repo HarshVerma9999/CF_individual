@@ -1,6 +1,6 @@
 # MERIDIAN — Capital Decision Engine
 
-An AI-powered capital budgeting application built for an individual corporate-finance assignment. It evaluates a real capital investment decision at **Majid Al Futtaim's Mall of the Emirates**: purchasing and owning a 5 MWp rooftop solar PV system (25-year life) versus a chiller-plant + BMS efficiency retrofit (12-year life), with MAF's real-world solar PPA retained as an out-of-model benchmark.
+An AI-powered capital budgeting application built for an individual corporate-finance assignment. It evaluates a real capital investment decision at **Majid Al Futtaim's Mall of the Emirates**: purchasing and owning a 5 MWp rooftop solar PV system (25-year life) versus a chiller-plant + BMS efficiency retrofit (12-year life), with MAF's real-world solar PPA retained as an out-of-model benchmark. MOE already operates a Phase-1 solar plant — an Enova-built carport array (7,291 panels on 1,068 carports, 11,996 m², ~3 GWh/yr, saving up to AED 1.4m annually) — so the modelled decision is whether MAF funds and owns Phase 2 on the mall roof or contracts it; Phase 1 serves as the empirical benchmark (6.9 m²/kWp measured on site, tariff triangulation at ~AED 0.467/kWh, and the citable precedent that carport/landlord-load solar savings accrue almost fully to MAF).
 
 ## Architecture — three strictly separated layers
 
@@ -15,11 +15,13 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Tests (31 assertions, including golden values cross-checked against an independent reference implementation and an independent first-principles recomputation of after-tax salvage, split-rate MIRR and PI):
+Open http://localhost:3000. Tests (33 assertions — golden values recomputed independently from first principles for every reported metric):
 
 ```bash
 npx vitest run
 ```
+
+**Cross-tool verification.** In addition to the test suite, an independent Excel model was built from first principles — native NPV/IRR/MIRR functions over a separately constructed cash-flow grid. It corroborates the engine's Option B metrics closely and independently confirms two engine claims: split-rate MIRR equals single-rate MIRR because only year 0 is negative, and the base-case FCF stream has exactly one sign change, so the IRR is unique. It also surfaced the need to state the per-option retention shares more prominently (A 50% vs B 35% — deliberate, justified by which meter each option's saving lands on). What this cross-check does *not* prove: it validates arithmetic, not the Class 3 assumptions (retention shares, mall consumption, Option B capex), which can only be validated against sources.
 
 ## Environment
 

@@ -87,7 +87,7 @@ export default function Home() {
 
   const scenDrivers = (which: "worst" | "best") =>
     which === "worst"
-      ? "Soft-energy world: flat tariff, capex over-run, −10% yield, retention at low bound. The single driver that flips A negative is retention below its switching value."
+      ? "Soft-energy world: flat tariff, capex over-run, −10% yield, retention at low bound. No single driver flips A alone — the worst case turns negative through the combination."
       : "Tight-energy world: 2.5% escalation, tender savings on capex, upper-design yield, high retention.";
 
   return (
@@ -128,14 +128,15 @@ export default function Home() {
             <div className="igroup-head"><div className="gicon">{I.sun}</div><h3>Option A — Rooftop solar</h3><span className="tag">25 yr</span></div>
             <SliderRow label="Landlord retention share" badge={3} value={p.retA} min={0.1} max={0.9} step={0.01}
               display={`${Math.round(p.retA * 100)}%`} tick={sw.retA}
-              src="Decision-critical judgement — share of the solar saving MAF keeps after service-charge pass-through"
+              src="Decision-critical judgement — share of the solar saving MAF keeps after service-charge pass-through. Phase-1 precedent: MOE's existing Enova carport plant (3 GWh) serves landlord load — MAF captures close to the full saving"
               onChange={set("retA")} />
             <SliderRow label="Capex" badge={2} value={p.capexA} min={1.2} max={3.4} step={0.05}
               display={`AED ${p.capexA.toFixed(2)}/Wp`} tick={sw.capexA}
               src="UAE installer range — weakest sourced input, widest band"
               onChange={set("capexA")} />
-            <SliderRow label="Specific yield" badge={2} value={p.yield_} min={1300} max={1900} step={10}
-              display={`${p.yield_.toLocaleString()} kWh/kWp`} src="Global Solar Atlas, rooftop-derated"
+            <SliderRow label="Specific yield" badge={1} value={p.yield_} min={1300} max={1900} step={10}
+              display={`${p.yield_.toLocaleString()} kWh/kWp`} tick={sw.yield_}
+              src="Global Solar Atlas, MOE site, medium commercial rooftop (100 kWp ref): 172.101 MWh/yr = 1,721 kWh/kWp. Excludes soiling — cleaning assumed within O&M; ±10% band covers shortfall"
               onChange={set("yield_")} />
             <div className="static-row"><span>System capacity</span><span className="val num">5.0 MWp</span></div>
             <div className="static-row"><span>Degradation <span className="badge c1">Class 1</span></span><span className="val num">0.50%/yr</span></div>
@@ -165,7 +166,7 @@ export default function Home() {
             <div className="igroup-head"><div className="gicon">{I.bank}</div><h3>Finance</h3></div>
             <SliderRow label="WACC (nominal)" badge={2} value={p.wacc} min={0.06} max={0.12} step={0.001}
               display={`${(p.wacc * 100).toFixed(2)}%`}
-              src="MAFP FY2025: 84.1% equity @ 9.2% · 15.9% debt @ 4.0% after-tax"
+              src="Rf 4.65% (US 10Y, 14 Aug 2026) + β 0.691 × UAE ERP 5.491% (Damodaran Apr-26; βu 0.5898 relevered at D/E 18.85%) → Ke 8.44%; kd 4.2–4.6% → WACC 7.71–7.77%, base 7.74%"
               onChange={set("wacc")} />
             <div className="static-row"><span>Corporate tax <span className="badge c1">Class 1</span></span><span className="val num">9%</span></div>
             <div className="static-row"><span>Depreciation</span><span className="val num">Straight-line → salvage</span></div>
@@ -234,7 +235,7 @@ export default function Home() {
                 </div>
                 <div className="eaa-note">Unequal lives (25 vs 12) → ranked on EAA, never raw NPV or IRR. Rule R1.</div>
                 <div className="ppa-strip">
-                  <b>PPA benchmark (out of model):</b> ownership LCOE ≈ <span className="num">AED 0.15/kWh</span> vs
+                  <b>PPA benchmark (out of model):</b> ownership LCOE ≈ <span className="num">AED 0.14/kWh</span> vs
                   DEWA <span className="num">{p.tariff.toFixed(2)}</span> vs typical UAE rooftop PPA{" "}
                   <span className="num">0.14–0.20</span>. MAF&apos;s 2023 Yellow Door agreement is the zero-capex
                   fallback if the retention condition fails.
@@ -455,13 +456,13 @@ export default function Home() {
               <table className="reg-table">
                 <thead><tr><th>Input</th><th>Value</th><th>Class</th><th>Source</th></tr></thead>
                 <tbody>
-                  <tr><td>Effective tariff</td><td className="num">AED 0.440/kWh</td><td><span className="badge c1">1</span></td><td>DEWA published schedule + Aug-26 fuel surcharge; ESCO cross-check 0.445</td></tr>
-                  <tr><td>Specific yield</td><td className="num">1,650 kWh/kWp</td><td><span className="badge c2">2</span></td><td>Global Solar Atlas, rooftop-derated</td></tr>
+                  <tr><td>Effective tariff</td><td className="num">AED 0.440/kWh</td><td><span className="badge c1">1</span></td><td>DEWA published schedule + Aug-26 fuel surcharge. Triangulated twice: Etihad ESCO JAFZA (0.445) and MOE's own carport plant — AED 1.4m on 3 GWh implies 0.467 (an "up to" figure, so an upper bound)</td></tr>
+                  <tr><td>Specific yield</td><td className="num">1,721 kWh/kWp</td><td><span className="badge c1">1</span></td><td>Global Solar Atlas, MOE site, medium commercial rooftop config (100 kWp ref: 172.101 MWh/yr; GTI 2,315.3 kWh/m² @ 26° tilt). Excludes soiling — cleaning assumed within O&M, flagged. Empirical cross-check: MOE's Enova carport plant, 11,996 m² ≈ 6.9 m²/kWp measured on site</td></tr>
                   <tr><td>Solar capex</td><td className="num">AED 1.80/Wp</td><td><span className="badge c2">2</span></td><td>UAE installer range — widest sensitivity band</td></tr>
                   <tr><td>Chiller retrofit capex</td><td className="num">AED {(FIXED.B.capex / 1e6).toFixed(2)}m</td><td><span className="badge c2">2</span></td><td>3.7-yr ESPC payback (Siemens/Etihad ESCO retrofit, 2022) × gross saving AED 8.8m. Caveats: mosque load profile, not a mall; inferred from payback, may embed ESCO margin; 2022 figures. Same contract&apos;s 20.43% guaranteed saving corroborates the 20% efficiency assumption</td></tr>
-                  <tr><td>Retention share A / B</td><td className="num">50% / 35%</td><td><span className="badge c3">3</span></td><td>Judgement from MAFP service-charge structure — decision-critical</td></tr>
+                  <tr><td>Retention share A / B</td><td className="num">50% / 35%</td><td><span className="badge c3">3</span></td><td>Deliberately asymmetric and decision-critical. A: solar offsets the landlord's bulk meter — MOE's Phase-1 carport plant (landlord load) is the citable precedent for near-full capture. B: central-plant savings are the most service-charge-recoverable</td></tr>
                   <tr><td>Mall consumption</td><td className="num">100 GWh/yr</td><td><span className="badge c3">3</span></td><td><b>Unsourced</b> whole-building estimate, flagged. MAF&apos;s 2024 Environmental Data Annex discloses landlord shared-services consumption only (29 malls: 183.9 GWh electricity + 181.6 GWh(th) chilled water; landlord intensity 275 kWh/m²/yr) — no whole-building, per-mall figure is published, and deriving one would stack three further judgements</td></tr>
-                  <tr><td>WACC</td><td className="num">8.40%</td><td><span className="badge c2">2</span></td><td>MAFP FY2025 audited statements; CAPM via Hamada relever</td></tr>
+                  <tr><td>WACC</td><td className="num">7.74%</td><td><span className="badge c2">2</span></td><td>Rf 4.65% (US 10Y, 14 Aug 2026); Damodaran Apr-2026 UAE ERP 5.491%; βu 0.5898 (EM real-estate ops, cash-corrected, Jan-2026, 406 firms; 0.5416 uncorrected as sensitivity) relevered at MAFP D/E 18.85%, 9% tax → β 0.691, Ke 8.44%; kd 4.2–4.6% book proxy → WACC 7.71–7.77%</td></tr>
                   <tr><td>Corporate tax</td><td className="num">9%</td><td><span className="badge c1">1</span></td><td>UAE Federal Decree-Law 47/2022</td></tr>
                 </tbody>
               </table>

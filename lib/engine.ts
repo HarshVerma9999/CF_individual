@@ -30,7 +30,22 @@ export const FIXED = {
 } as const;
 
 export const BASE: Params = {
-  tariff: 0.44, esc: 0.01, retA: 0.5, capexA: 1.8, yield_: 1650, retB: 0.35, eff: 0.2, wacc: 0.084,
+  tariff: 0.44,
+  esc: 0.01,
+  retA: 0.5,
+  capexA: 1.8,
+  // Global Solar Atlas, MOE site, medium commercial rooftop config (100 kWp ref):
+  // 172.101 MWh/yr = 1,721 kWh/kWp/yr. Class 1. Excludes soiling — O&M assumed to
+  // include cleaning sufficient to sustain it (flagged); ±10% band covers shortfall.
+  yield_: 1721,
+  retB: 0.35,
+  eff: 0.2,
+  // WACC rebuilt 2026-08-14: Rf 4.65% (US 10Y, 14 Aug 2026); Damodaran Apr-2026 UAE
+  // total ERP 5.491%; unlevered beta 0.5898 (EM real-estate ops, cash-corrected,
+  // Jan-2026) relevered at MAFP D/E 18.85%, 9% tax -> beta 0.6910, Ke 8.44%;
+  // kd 4.2-4.6% book proxy (midpoint 4.4% -> 4.00% after tax) -> WACC 7.71-7.77%,
+  // base = 7.74% midpoint.
+  wacc: 0.0774,
 };
 
 export interface YearRow {
@@ -384,7 +399,7 @@ export function buildPayload(p: Params, a: FullAnalysis) {
       rules: verdict.rules.map((x) => ({ id: x.id, pass: x.pass })),
     },
     ppa_benchmark: {
-      ownership_lcoe_aed_kwh: 0.15, dewa_tariff_aed_kwh: p.tariff,
+      ownership_lcoe_aed_kwh: 0.14, dewa_tariff_aed_kwh: p.tariff,
       typical_uae_rooftop_ppa_range_aed_kwh: [0.14, 0.2],
       note: "Out-of-model benchmark. MAF's 2023 Yellow Door Energy agreement is the zero-capex fallback.",
     },
