@@ -15,13 +15,19 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Tests (33 assertions — golden values recomputed independently from first principles for every reported metric):
+Open http://localhost:3000. Tests (33 assertions — golden values recomputed independently from first principles for every reported metric; the recomputation itself is in the repo, `verification/independent_check.py`, and running it prints the exact expected values the tests assert):
 
 ```bash
 npx vitest run
 ```
 
 **Cross-tool verification.** In addition to the test suite, an independent Excel model was built from first principles — native NPV/IRR/MIRR functions over a separately constructed cash-flow grid. It corroborates the engine's Option B metrics closely and independently confirms two engine claims: split-rate MIRR equals single-rate MIRR because only year 0 is negative, and the base-case FCF stream has exactly one sign change, so the IRR is unique. It also surfaced the need to state the per-option retention shares more prominently (A 50% vs B 35% — deliberate, justified by which meter each option's saving lands on). What this cross-check does *not* prove: it validates arithmetic, not the Class 3 assumptions (retention shares, mall consumption, Option B capex), which can only be validated against sources.
+
+## Project documents (`docs/`)
+
+- [`MAF_Full_Analysis_4000w.md`](docs/MAF_Full_Analysis_4000w.md) — the full-depth analysis (master document for the written report); kept in sync with the engine's current base case.
+- [`MAF_assumptions_register.md`](docs/MAF_assumptions_register.md), [`MAF_model_spec_and_WACC.md`](docs/MAF_model_spec_and_WACC.md), [`MAF_AI_boundary_spec.md`](docs/MAF_AI_boundary_spec.md) — the signed-off working specifications the build followed. These are **historical documents**: where a value differs from the app (e.g. yield, WACC, Option B capex), the app and the full analysis supersede them; they are retained to show the derivation trail.
+- [`design_sample.html`](docs/design_sample.html) — the approved interactive design prototype that preceded the build (self-contained, open in any browser; carries the pre-refresh base numbers).
 
 ## Environment
 

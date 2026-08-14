@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MERIDIAN — Capital Decision Engine · Design Sample</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F8FAFC; --card:#FFFFFF; --fg:#020617; --fg-soft:#334155;
+  --primary:#0F172A; --on-primary:#FFFFFF;
+  --accent:#A16207; --accent-soft:#FEF3C7;
+  --muted:#E8ECF1; --muted-fg:#64748B; --border:#E2E8F0; --hairline:#EDF1F5;
+  --pos:#047857; --pos-soft:#ECFDF5; --neg:#DC2626; --neg-soft:#FEF2F2;
+  --warn:#B45309; --warn-soft:#FFFBEB;
+  --ai-surface:#F5F7FB; --ai-border:#DBE4F0;
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 4px 16px rgba(15,23,42,.06);
+  --shadow-lg:0 4px 8px rgba(15,23,42,.06),0 12px 40px rgba(15,23,42,.10);
+  --chart-bar:#334E68; --chart-grid:#E2E8F0; --chart-line:#A16207;
+}
+[data-theme="dark"]{
+  --bg:#0F172A; --card:#192134; --fg:#F1F5F9; --fg-soft:#CBD5E1;
+  --primary:#E2E8F0; --on-primary:#0F172A;
+  --accent:#D4A72C; --accent-soft:#2A2410;
+  --muted:#1E293B; --muted-fg:#94A3B8; --border:rgba(255,255,255,.08); --hairline:rgba(255,255,255,.06);
+  --pos:#34D399; --pos-soft:#062E24; --neg:#EF4444; --neg-soft:#3A0E0E;
+  --warn:#FBBF24; --warn-soft:#2A2008;
+  --ai-surface:#151E31; --ai-border:#263450;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+  --shadow-lg:0 4px 8px rgba(0,0,0,.35),0 12px 40px rgba(0,0,0,.4);
+  --chart-bar:#7E9CB9; --chart-grid:#25314A; --chart-line:#D4A72C;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.5;transition:background .25s,color .25s}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font-family:inherit;cursor:pointer}
+
+/* ---------- Topbar ---------- */
+.topbar{display:flex;align-items:center;gap:16px;padding:0 24px;height:60px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;font-weight:700;font-size:.85rem;letter-spacing:.5px}
+.brand h1{font-size:1rem;font-weight:600;letter-spacing:-.01em}
+.brand h1 span{color:var(--muted-fg);font-weight:400}
+.asset-chip{display:flex;align-items:center;gap:8px;background:var(--muted);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.8rem;color:var(--fg-soft)}
+.asset-chip svg{width:14px;height:14px;stroke:var(--muted-fg)}
+.topbar .spacer{flex:1}
+.top-btn{display:flex;align-items:center;gap:7px;background:none;border:1px solid var(--border);border-radius:8px;padding:7px 13px;font-size:.8rem;font-weight:500;color:var(--fg-soft);transition:all .18s}
+.top-btn:hover{border-color:var(--muted-fg);background:var(--muted)}
+.top-btn svg{width:15px;height:15px;stroke:currentColor}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 0 3px var(--pos-soft)}
+.engine-chip{display:flex;align-items:center;gap:8px;font-size:.72rem;color:var(--muted-fg);border:1px solid var(--border);border-radius:20px;padding:5px 12px}
+
+/* ---------- Layout ---------- */
+.layout{display:flex;min-height:calc(100vh - 60px)}
+.rail{width:330px;min-width:330px;background:var(--card);border-right:1px solid var(--border);padding:18px 0 40px;overflow-y:auto;max-height:calc(100vh - 60px);position:sticky;top:60px}
+.main{flex:1;padding:22px 28px 60px;min-width:0}
+
+/* ---------- Input rail ---------- */
+.rail-head{padding:0 20px 12px;display:flex;justify-content:space-between;align-items:baseline}
+.rail-head h2{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg)}
+.rail-head .reset{font-size:.7rem;color:var(--accent);background:none;border:none;font-weight:500}
+.igroup{border-top:1px solid var(--hairline);padding:14px 20px 6px}
+.igroup>h3{font-size:.78rem;font-weight:600;color:var(--fg-soft);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.igroup>h3 .tag{font-size:.62rem;font-weight:600;padding:2px 7px;border-radius:4px;background:var(--muted);color:var(--muted-fg);letter-spacing:.03em}
+.irow{margin-bottom:14px}
+.irow-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.irow label{font-size:.78rem;color:var(--fg-soft)}
+.irow .val{font-size:.8rem;font-weight:600}
+.badge{display:inline-block;font-size:.58rem;font-weight:600;padding:1.5px 6px;border-radius:4px;margin-left:6px;vertical-align:1px;letter-spacing:.02em}
+.badge.c1{background:var(--primary);color:var(--on-primary)}
+.badge.c2{background:none;border:1px solid var(--muted-fg);color:var(--muted-fg)}
+.badge.c3{background:var(--warn-soft);border:1px dashed var(--warn);color:var(--warn)}
+.slider-wrap{position:relative;height:26px;display:flex;align-items:center}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--muted);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--card);border:2.5px solid var(--primary);cursor:grab;transition:transform .15s;box-shadow:0 1px 4px rgba(15,23,42,.25)}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+.switch-tick{position:absolute;top:2px;width:2px;height:11px;background:var(--accent);border-radius:1px;pointer-events:none}
+.switch-tick::after{content:"NPV = 0";position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:.52rem;color:var(--accent);white-space:nowrap;font-weight:600;letter-spacing:.02em}
+.irow .range-meta{display:flex;justify-content:space-between;font-size:.62rem;color:var(--muted-fg);margin-top:1px}
+.irow .src{font-size:.64rem;color:var(--muted-fg);margin-top:3px;line-height:1.35}
+.static-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.76rem;color:var(--fg-soft);border-bottom:1px dashed var(--hairline)}
+.static-row:last-child{border-bottom:none}
+.static-row .val{font-weight:600;color:var(--fg)}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 18px;font-size:.85rem;font-weight:500;color:var(--muted-fg);background:none;border:none;border-bottom:2px solid transparent;transition:color .18s;display:flex;align-items:center;gap:7px}
+.tab svg{width:15px;height:15px;stroke:currentColor}
+.tab:hover{color:var(--fg)}
+.tab.active{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.pane{display:none;animation:fade .3s ease}
+.pane.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.pane{animation:none}}
+
+/* ---------- Verdict ---------- */
+.verdict-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:1100px){.verdict-grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+.verdict-card{padding:22px 24px;position:relative;overflow:hidden}
+.verdict-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--verdict-color,var(--pos))}
+.verdict-label{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted-fg);margin-bottom:6px}
+.verdict-title{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.verdict-title .pill{font-size:.66rem;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase}
+.pill.conditional{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)}
+.pill.clean{background:var(--pos-soft);color:var(--pos);border:1px solid var(--pos)}
+.pill.reject{background:var(--neg-soft);color:var(--neg);border:1px solid var(--neg)}
+.verdict-reason{font-size:.86rem;color:var(--fg-soft);margin:10px 0 14px;max-width:56ch}
+.conditions{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.condition{display:flex;gap:10px;align-items:flex-start;font-size:.8rem;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:9px;padding:9px 12px}
+.condition .cnum{font-weight:700;color:var(--accent);font-size:.72rem;margin-top:1px}
+.condition b{font-weight:600}
+.rule-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.66rem;font-weight:600;padding:4px 9px;border-radius:6px;border:1px solid var(--border);color:var(--muted-fg);background:var(--bg);display:flex;align-items:center;gap:4px;cursor:help;transition:all .15s}
+.chip:hover{border-color:var(--muted-fg)}
+.chip.pass{color:var(--pos)}
+.chip.fail{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+.chip .mark{font-size:.7rem}
+
+/* EAA card */
+.eaa-card{padding:20px 22px}
+.eaa-card h3,.section-h{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg);margin-bottom:14px}
+.eaa-row{margin-bottom:14px}
+.eaa-row .eaa-top{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:5px}
+.eaa-row .eaa-top b{font-weight:600}
+.eaa-bar-track{height:22px;background:var(--muted);border-radius:6px;position:relative;overflow:hidden}
+.eaa-bar{position:absolute;top:0;bottom:0;border-radius:6px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.eaa-note{font-size:.7rem;color:var(--muted-fg);margin-top:10px;line-height:1.45;border-top:1px dashed var(--hairline);padding-top:10px}
+.ppa-strip{margin-top:14px;padding:11px 13px;background:var(--bg);border:1px dashed var(--border);border-radius:9px;font-size:.74rem;color:var(--fg-soft);line-height:1.5}
+.ppa-strip b{font-weight:600}
+
+/* ---------- Metrics table ---------- */
+.metrics-card{padding:20px 22px}
+table.metrics{width:100%;border-collapse:collapse;font-size:.8rem}
+table.metrics th{text-align:right;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-fg);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--border)}
+table.metrics th:first-child{text-align:left}
+table.metrics td{padding:7.5px 10px;text-align:right;border-bottom:1px solid var(--hairline)}
+table.metrics td:first-child{text-align:left;color:var(--fg-soft)}
+table.metrics tr:last-child td{border-bottom:none}
+table.metrics tr.rank td{background:var(--accent-soft);font-weight:600;border-radius:0}
+td.figure{cursor:pointer;position:relative;font-weight:500}
+td.figure:hover{color:var(--accent)}
+td.figure .u{border-bottom:1px dotted var(--muted-fg)}
+.tpos{color:var(--pos)}.tneg{color:var(--neg)}
+.metric-note{font-size:.68rem;color:var(--muted-fg);margin-top:10px;line-height:1.5}
+
+/* trace popover */
+.popover{position:fixed;z-index:200;background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow-lg);padding:14px 16px;width:330px;font-size:.75rem;display:none}
+.popover.show{display:block;animation:fade .18s ease}
+.popover h4{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted-fg);margin-bottom:8px;display:flex;justify-content:space-between}
+.popover .close{background:none;border:none;color:var(--muted-fg);font-size:.9rem}
+.popover .formula{background:var(--bg);border:1px solid var(--hairline);border-radius:7px;padding:8px 10px;font-size:.68rem;line-height:1.6;margin-bottom:9px}
+.popover .feed{display:flex;justify-content:space-between;padding:3px 0;color:var(--fg-soft);border-bottom:1px dashed var(--hairline)}
+.popover .feed:last-child{border:none}
+
+/* ---------- Charts ---------- */
+.chart-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:1100px){.chart-grid2{grid-template-columns:1fr}}
+.chart-card{padding:20px 22px}
+.chart-card .caption{font-size:.72rem;color:var(--muted-fg);margin-top:10px;line-height:1.5;border-top:1px dashed var(--hairline);padding-top:10px}
+.chart-card svg{width:100%;height:auto;display:block}
+.svg-label{font-size:10px;fill:var(--muted-fg);font-family:'IBM Plex Sans'}
+.svg-num{font-size:10px;font-family:'IBM Plex Mono';fill:var(--fg-soft)}
+
+/* ---------- Risk tab ---------- */
+.sw-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.sw-table th{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-fg);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+.sw-table td{padding:8px;border-bottom:1px solid var(--hairline)}
+.margin-bar{height:7px;border-radius:4px;background:var(--muted);position:relative;min-width:110px}
+.margin-fill{position:absolute;top:0;bottom:0;left:0;border-radius:4px;background:var(--pos)}
+.margin-fill.thin{background:var(--warn)}
+.scen-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+@media(max-width:900px){.scen-grid{grid-template-columns:1fr}}
+.scen{padding:16px 18px;border-radius:12px;border:1px solid var(--border);background:var(--card)}
+.scen h4{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg);margin-bottom:8px}
+.scen .big{font-size:1.3rem;font-weight:700;letter-spacing:-.01em}
+.scen .sub{font-size:.72rem;color:var(--muted-fg);margin-top:3px}
+.scen.base{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.scen-desc{font-size:.68rem;color:var(--muted-fg);margin-top:9px;line-height:1.45;border-top:1px dashed var(--hairline);padding-top:8px}
+
+/* ---------- AI tab ---------- */
+.ai-banner{display:flex;align-items:center;gap:10px;background:var(--ai-surface);border:1px solid var(--ai-border);border-radius:11px;padding:11px 16px;font-size:.76rem;color:var(--fg-soft);margin-bottom:16px}
+.ai-banner svg{width:16px;height:16px;stroke:var(--accent);flex-shrink:0}
+.ai-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+@media(max-width:1100px){.ai-grid{grid-template-columns:1fr}}
+.ai-block{background:var(--ai-surface);border:1px solid var(--ai-border);border-radius:13px;padding:17px 19px;margin-bottom:14px}
+.ai-block-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.ai-block-head h4{font-size:.78rem;font-weight:600}
+.verified{display:flex;align-items:center;gap:5px;font-size:.62rem;font-weight:600;color:var(--pos);background:var(--pos-soft);padding:3px 9px;border-radius:12px}
+.ai-block p{font-size:.8rem;color:var(--fg-soft);line-height:1.6}
+.ai-block p b{color:var(--fg);font-weight:600}
+.chat-card{background:var(--card);border:1px solid var(--border);border-radius:13px;display:flex;flex-direction:column;overflow:hidden}
+.chat-head{padding:13px 17px;border-bottom:1px solid var(--hairline);font-size:.78rem;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.chat-head .scope{font-size:.62rem;color:var(--muted-fg);font-weight:400}
+.chat-body{padding:15px 17px;display:flex;flex-direction:column;gap:11px;min-height:280px}
+.msg{max-width:88%;padding:9px 13px;border-radius:12px;font-size:.78rem;line-height:1.55}
+.msg.user{align-self:flex-end;background:var(--primary);color:var(--on-primary);border-bottom-right-radius:4px}
+.msg.ai{align-self:flex-start;background:var(--ai-surface);border:1px solid var(--ai-border);color:var(--fg-soft);border-bottom-left-radius:4px}
+.msg.ai.refusal{border-style:dashed;color:var(--muted-fg)}
+.msg .refusal-tag{display:inline-block;font-size:.6rem;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:4px;padding:1px 6px;margin-bottom:4px}
+.chat-input{display:flex;gap:8px;padding:12px 15px;border-top:1px solid var(--hairline)}
+.chat-input input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:9px 13px;font-size:.78rem;color:var(--fg);font-family:inherit;outline:none}
+.chat-input input:focus{border-color:var(--accent)}
+.chat-input button{background:var(--primary);color:var(--on-primary);border:none;border-radius:9px;padding:0 16px;font-size:.78rem;font-weight:500}
+
+/* ---------- Drawer ---------- */
+.drawer-veil{position:fixed;inset:0;background:rgba(2,6,23,.45);z-index:90;display:none}
+.drawer-veil.show{display:block}
+.drawer{position:fixed;top:0;right:-620px;width:600px;max-width:94vw;height:100vh;background:var(--card);border-left:1px solid var(--border);z-index:100;transition:right .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;box-shadow:var(--shadow-lg)}
+.drawer.show{right:0}
+.drawer-head{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card)}
+.drawer-head h3{font-size:.95rem;font-weight:600}
+.drawer-body{padding:20px 24px 60px}
+.drawer-body h4{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted-fg);margin:18px 0 10px}
+.drawer-body h4:first-child{margin-top:0}
+.reg-table{width:100%;border-collapse:collapse;font-size:.72rem}
+.reg-table th{text-align:left;font-size:.62rem;text-transform:uppercase;color:var(--muted-fg);padding:5px 7px;border-bottom:1px solid var(--border)}
+.reg-table td{padding:6px 7px;border-bottom:1px solid var(--hairline);color:var(--fg-soft);vertical-align:top}
+.map-row{display:grid;grid-template-columns:1fr 18px 1fr;gap:8px;font-size:.74rem;padding:7px 0;border-bottom:1px dashed var(--hairline);color:var(--fg-soft);align-items:center}
+.map-row .arrow{color:var(--accent);text-align:center}
+.footer-note{margin-top:26px;padding:14px 18px;background:var(--bg);border:1px dashed var(--border);border-radius:10px;font-size:.72rem;color:var(--muted-fg);line-height:1.55}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">M</div>
+    <h1>MERIDIAN <span>· Capital Decision Engine</span></h1>
+  </div>
+  <div class="asset-chip">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+    Mall of the Emirates — MAF Properties LLC
+  </div>
+  <div class="spacer"></div>
+  <div class="engine-chip"><span class="live-dot"></span>Deterministic engine · live</div>
+  <button class="top-btn" id="drawerBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/></svg>
+    Methodology
+  </button>
+  <button class="top-btn" id="themeBtn" aria-label="Toggle dark mode">
+    <svg id="moonIcon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <span id="themeLabel">Dark</span>
+  </button>
+</header>
+
+<div class="layout">
+<!-- ============ INPUT RAIL ============ -->
+<aside class="rail">
+  <div class="rail-head"><h2>Assumptions</h2><button class="reset" id="resetBtn">Reset to base</button></div>
+
+  <div class="igroup">
+    <h3>Market &amp; tariff</h3>
+    <div class="irow">
+      <div class="irow-top"><label>Effective tariff <span class="badge c1">Class 1</span></label><span class="val num" id="v_tariff">AED 0.440/kWh</span></div>
+      <div class="slider-wrap"><input type="range" id="s_tariff" min="0.25" max="0.60" step="0.005" value="0.44"><div class="switch-tick" id="tick_tariff"></div></div>
+      <div class="range-meta"><span>0.250</span><span>0.600</span></div>
+      <div class="src">DEWA slab 0.380 + fuel surcharge 0.060 · cross-checked vs Etihad ESCO (0.445)</div>
+    </div>
+    <div class="irow">
+      <div class="irow-top"><label>Tariff escalation <span class="badge c2">Class 2</span></label><span class="val num" id="v_esc">1.0%/yr</span></div>
+      <div class="slider-wrap"><input type="range" id="s_esc" min="0" max="0.03" step="0.0025" value="0.01"></div>
+      <div class="range-meta"><span>0%</span><span>3%</span></div>
+    </div>
+  </div>
+
+  <div class="igroup">
+    <h3>Option A — Rooftop solar <span class="tag">25 yr</span></h3>
+    <div class="irow">
+      <div class="irow-top"><label>Landlord retention share <span class="badge c3">Class 3</span></label><span class="val num" id="v_retA">50%</span></div>
+      <div class="slider-wrap"><input type="range" id="s_retA" min="0.10" max="0.90" step="0.01" value="0.50"><div class="switch-tick" id="tick_retA"></div></div>
+      <div class="range-meta"><span>10%</span><span>90%</span></div>
+      <div class="src">Decision-critical judgement — share of solar saving MAF keeps after service-charge pass-through</div>
+    </div>
+    <div class="irow">
+      <div class="irow-top"><label>Capex <span class="badge c2">Class 2</span></label><span class="val num" id="v_capexA">AED 1.80/Wp</span></div>
+      <div class="slider-wrap"><input type="range" id="s_capexA" min="1.20" max="3.40" step="0.05" value="1.80"><div class="switch-tick" id="tick_capexA"></div></div>
+      <div class="range-meta"><span>1.20</span><span>3.40</span></div>
+      <div class="src">UAE installer range — weakest sourced input, widest band</div>
+    </div>
+    <div class="irow">
+      <div class="irow-top"><label>Specific yield <span class="badge c2">Class 2</span></label><span class="val num" id="v_yield">1,650 kWh/kWp</span></div>
+      <div class="slider-wrap"><input type="range" id="s_yield" min="1300" max="1900" step="10" value="1650"></div>
+      <div class="range-meta"><span>1,300</span><span>1,900</span></div>
+    </div>
+    <div class="static-row"><span>System capacity</span><span class="val num">5.0 MWp</span></div>
+    <div class="static-row"><span>Degradation <span class="badge c1">Class 1</span></span><span class="val num">0.50%/yr</span></div>
+    <div class="static-row"><span>Inverter replacement (yr 12)</span><span class="val num">8% of capex</span></div>
+  </div>
+
+  <div class="igroup">
+    <h3>Option B — Chiller retrofit <span class="tag">12 yr</span></h3>
+    <div class="irow">
+      <div class="irow-top"><label>Landlord retention share <span class="badge c3">Class 3</span></label><span class="val num" id="v_retB">35%</span></div>
+      <div class="slider-wrap"><input type="range" id="s_retB" min="0.10" max="0.90" step="0.01" value="0.35"><div class="switch-tick" id="tick_retB"></div></div>
+      <div class="range-meta"><span>10%</span><span>90%</span></div>
+      <div class="src">Lower than A — central-plant savings are the most service-charge-recoverable</div>
+    </div>
+    <div class="irow">
+      <div class="irow-top"><label>Efficiency gain <span class="badge c2">Class 2</span></label><span class="val num" id="v_eff">20% of load</span></div>
+      <div class="slider-wrap"><input type="range" id="s_eff" min="0.10" max="0.30" step="0.01" value="0.20"></div>
+      <div class="range-meta"><span>10%</span><span>30%</span></div>
+    </div>
+    <div class="static-row"><span>Capex <span class="badge c2">Class 2</span></span><span class="val num">AED 48.0m</span></div>
+    <div class="static-row"><span>Mall consumption <span class="badge c3">Class 3</span></span><span class="val num">100 GWh/yr</span></div>
+  </div>
+
+  <div class="igroup">
+    <h3>Finance</h3>
+    <div class="irow">
+      <div class="irow-top"><label>WACC (nominal) <span class="badge c2">Class 2</span></label><span class="val num" id="v_wacc">8.40%</span></div>
+      <div class="slider-wrap"><input type="range" id="s_wacc" min="0.06" max="0.12" step="0.001" value="0.084"></div>
+      <div class="range-meta"><span>6%</span><span>12%</span></div>
+      <div class="src">MAFP FY2025: 84.1% equity @ 9.2% · 15.9% debt @ 4.0% after-tax</div>
+    </div>
+    <div class="static-row"><span>Corporate tax <span class="badge c1">Class 1</span></span><span class="val num">9%</span></div>
+    <div class="static-row"><span>Depreciation</span><span class="val num">Straight-line → salvage</span></div>
+  </div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+  <nav class="tabs">
+    <button class="tab active" data-pane="decision">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Decision</button>
+    <button class="tab" data-pane="cashflows">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18M7 14l4-4 3 3 5-6"/></svg>Cash Flows</button>
+    <button class="tab" data-pane="risk">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Risk &amp; Sensitivity</button>
+    <button class="tab" data-pane="ai">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 8V4H8m8 0h-4M4 12H2m4 0H4m16 0h-2m2 0h-2M9 16h6m-9 4h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>AI Analyst</button>
+  </nav>
+
+  <!-- ===== DECISION ===== -->
+  <section class="pane active" id="pane-decision">
+    <div class="verdict-grid">
+      <div class="card verdict-card" id="verdictCard">
+        <div class="verdict-label">Engine verdict · rules cited below</div>
+        <div class="verdict-title"><span id="verdictText">ACCEPT OPTION A</span><span class="pill conditional" id="verdictPill">Conditional</span></div>
+        <p class="verdict-reason" id="verdictReason"></p>
+        <div class="conditions" id="conditionList"></div>
+        <div class="rule-chips" id="ruleChips"></div>
+      </div>
+      <div class="card eaa-card">
+        <h3>Ranking — Equivalent Annual Annuity</h3>
+        <div class="eaa-row">
+          <div class="eaa-top"><b>A · Solar (25y)</b><span class="num" id="eaaAval"></span></div>
+          <div class="eaa-bar-track"><div class="eaa-bar" id="eaaAbar"></div></div>
+        </div>
+        <div class="eaa-row">
+          <div class="eaa-top"><b>B · Chillers (12y)</b><span class="num" id="eaaBval"></span></div>
+          <div class="eaa-bar-track"><div class="eaa-bar" id="eaaBbar"></div></div>
+        </div>
+        <div class="eaa-note">Unequal lives (25 vs 12) → ranked on EAA, never raw NPV or IRR. Rule R1.</div>
+        <div class="ppa-strip"><b>PPA benchmark (out of model):</b> ownership LCOE ≈ <span class="num">AED 0.15/kWh</span> vs DEWA <span class="num">0.44</span> vs typical UAE rooftop PPA <span class="num">0.14–0.20</span>. MAF's 2023 Yellow Door agreement is the zero-capex fallback if the retention condition fails.</div>
+      </div>
+    </div>
+
+    <div class="card metrics-card">
+      <h3 class="section-h">All thirteen required measures — computed live</h3>
+      <table class="metrics">
+        <thead><tr><th>Metric</th><th>Option A — Solar</th><th>Option B — Chillers</th></tr></thead>
+        <tbody id="metricsBody"></tbody>
+      </table>
+      <p class="metric-note">Click any underlined figure to trace it — formula, inputs and source classes. ARR shown for completeness; it ignores time value and ranks nothing. IRR uniqueness verified (single sign change) — the year-12 inverter outlay does not flip the sign, so split-rate MIRR coincides with single-rate.</p>
+    </div>
+  </section>
+
+  <!-- ===== CASH FLOWS ===== -->
+  <section class="pane" id="pane-cashflows">
+    <div class="chart-grid2">
+      <div class="card chart-card">
+        <h3 class="section-h">Year-1 build-up — Option A</h3>
+        <div id="waterfall"></div>
+        <p class="caption">How one year of value is assembled: gross avoided cost → the retention haircut (what tenants keep) → O&amp;M and opportunity cost → tax → operating cash flow. The retention haircut is the model's single biggest judgement.</p>
+      </div>
+      <div class="card chart-card">
+        <h3 class="section-h">25-year free cash flow &amp; cumulative discounted position — Option A</h3>
+        <div id="timeline"></div>
+        <p class="caption">Bars: annual FCF (year-12 inverter replacement visible). Gold line: cumulative discounted cash — it crosses zero at the discounted payback. Terminal year includes after-tax salvage.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RISK ===== -->
+  <section class="pane" id="pane-risk">
+    <div class="chart-grid2">
+      <div class="card chart-card">
+        <h3 class="section-h">Tornado — NPV sensitivity, ±20% each input (Option A)</h3>
+        <div id="tornado"></div>
+        <p class="caption">Tariff, yield and retention are equally dominant — they enter the saving line multiplicatively, so identical percentage moves have identical NPV effects. Capex and WACC are second-order.</p>
+      </div>
+      <div class="card chart-card">
+        <h3 class="section-h">Switching values — where NPV crosses zero</h3>
+        <table class="sw-table">
+          <thead><tr><th>Variable</th><th>Base</th><th>NPV = 0 at</th><th>Safety margin</th></tr></thead>
+          <tbody id="swBody"></tbody>
+        </table>
+        <p class="caption">Rule S2: a margin under 20% marks the decision fragile. The retention share is the binding constraint — it is also the least evidenced input (Class 3), which is exactly why the verdict is conditional on verifying it.</p>
+      </div>
+    </div>
+    <h3 class="section-h" style="margin:6px 0 0">Scenarios — variables moved coherently, not independently</h3>
+    <div class="scen-grid" id="scenGrid"></div>
+  </section>
+
+  <!-- ===== AI ===== -->
+  <section class="pane" id="pane-ai">
+    <div class="ai-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span><b>AI boundary:</b> this layer narrates the deterministic engine's output. It computes nothing, decides nothing, and every numeral below is round-trip verified against the engine payload. If this layer fails, the verdict above is unaffected.</span>
+    </div>
+    <div class="ai-grid">
+      <div>
+        <div class="ai-block">
+          <div class="ai-block-head"><h4>Verdict, in plain language</h4><span class="verified">✓ 6/6 numerals verified</span></div>
+          <p id="aiVerdict"></p>
+        </div>
+        <div class="ai-block">
+          <div class="ai-block-head"><h4>What could go wrong</h4><span class="verified">✓ 4/4 numerals verified</span></div>
+          <p id="aiRisk"></p>
+        </div>
+        <div class="ai-block">
+          <div class="ai-block-head"><h4>Why B loses despite a bigger year-1 saving</h4><span class="verified">✓ 3/3 numerals verified</span></div>
+          <p id="aiCompare"></p>
+        </div>
+      </div>
+      <div class="chat-card">
+        <div class="chat-head">Grounded Q&amp;A <span class="scope">answers only from the results payload</span></div>
+        <div class="chat-body" id="chatBody">
+          <div class="msg user">Why is the solar option only "conditional"?</div>
+          <div class="msg ai">The engine accepts Option A on every gate — NPV, profitability index, IRR against the 8.4% hurdle — but robustness rule <b>S1</b> failed: in the coherent worst case the NPV turns negative. The single driver responsible is the landlord retention share falling to 30%, below its 32% switching value. Verify the lease mechanics and the condition clears.</div>
+          <div class="msg user">What will DEWA tariffs be in 2030?</div>
+          <div class="msg ai refusal"><span class="refusal-tag">OUTSIDE PAYLOAD — DECLINED</span>That isn't in the computed results, and forecasting it would be analysis I'm not permitted to do. What I can tell you: the model's base assumes 1.0% annual escalation, and the accept verdict survives at 0%.</div>
+        </div>
+        <div class="chat-input">
+          <input type="text" placeholder="Ask about the computed results… (live in final build)" disabled>
+          <button disabled>Send</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- ============ DRAWER ============ -->
+<div class="drawer-veil" id="veil"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head"><h3>Methodology &amp; audit trail</h3><button class="top-btn" id="drawerClose">Close</button></div>
+  <div class="drawer-body">
+    <h4>Assumptions register (excerpt)</h4>
+    <table class="reg-table">
+      <thead><tr><th>Input</th><th>Value</th><th>Class</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>Effective tariff</td><td class="num">AED 0.440/kWh</td><td><span class="badge c1">1</span></td><td>DEWA published schedule + Aug-26 fuel surcharge; ESCO cross-check 0.445</td></tr>
+        <tr><td>Specific yield</td><td class="num">1,650 kWh/kWp</td><td><span class="badge c2">2</span></td><td>Global Solar Atlas, rooftop-derated</td></tr>
+        <tr><td>Solar capex</td><td class="num">AED 1.80/Wp</td><td><span class="badge c2">2</span></td><td>UAE installer range — widest sensitivity band</td></tr>
+        <tr><td>Chiller capex</td><td class="num">AED 48m</td><td><span class="badge c2">2/3</span></td><td>Independent $/RT anchor; ESPC back-solve as cross-check only</td></tr>
+        <tr><td>Retention share A / B</td><td class="num">50% / 35%</td><td><span class="badge c3">3</span></td><td>Judgement from MAFP service-charge structure — decision-critical</td></tr>
+        <tr><td>WACC</td><td class="num">8.40%</td><td><span class="badge c2">2</span></td><td>MAFP FY2025 audited statements; CAPM via Hamada relever</td></tr>
+        <tr><td>Corporate tax</td><td class="num">9%</td><td><span class="badge c1">1</span></td><td>UAE Federal Decree-Law 47/2022</td></tr>
+      </tbody>
+    </table>
+    <h4>Brief-compliance mapping (excerpt)</h4>
+    <div class="map-row"><span>"Expected annual revenues"</span><span class="arrow">→</span><span>Avoided electricity cost — the economic equivalent for a cost-reduction project</span></div>
+    <div class="map-row"><span>"Depreciation (user input)"</span><span class="arrow">→</span><span>Derived from cost, life &amp; salvage; user selects method — declared deviation, protects the tax shield</span></div>
+    <div class="map-row"><span>"Break-even analysis"</span><span class="arrow">→</span><span>Financial break-even (switching values) — no unit volume exists in a cost-saving project</span></div>
+    <div class="map-row"><span>"Working capital"</span><span class="arrow">→</span><span>A: nil (stated honestly) · B: AED 0.5m spares, recovered at t=12</span></div>
+    <h4>Decision rules</h4>
+    <div class="map-row"><span class="mono">G1–G5</span><span class="arrow">→</span><span>Gates: NPV&gt;0 · PI&gt;1 · IRR&gt;WACC · IRR unique · disc. payback ≤ life</span></div>
+    <div class="map-row"><span class="mono">R1–R2</span><span class="arrow">→</span><span>Rank on EAA; gaps within 5% → indistinguishable → Review</span></div>
+    <div class="map-row"><span class="mono">S1–S3</span><span class="arrow">→</span><span>Robustness: worst-case NPV, switching margins &gt;20%, ranking stability</span></div>
+    <div class="footer-note">Design sample. In the final build this drawer holds the full register (all inputs, exportable), every formula definition, the complete compliance table, and the AI test protocol with recorded results.</div>
+  </div>
+</aside>
+
+<div class="popover" id="popover"></div>
+
+<script>
+/* ================= ENGINE (deterministic — ported from maf_engine.py) ================= */
+const FIXED={tax:.09,kdAT:.04,omEsc:.02,A:{cap:5000,deg:.005,omKwp:25,opp:1e5,salv:.05,life:25,invFrac:.08,invYr:12,wc:0},B:{gwh:100,capex:48e6,om:3e5,salv:.02,life:12,wc:5e5}};
+let P={tariff:.44,esc:.01,retA:.50,capexA:1.80,yield:1650,retB:.35,eff:.20,wacc:.084};
+const BASE={...P};
+
+function buildA(p){const F=FIXED.A,capex=F.cap*1000*p.capexA,salv=capex*F.salv,inv=capex*F.invFrac,depM=(capex-salv)/F.life,depI=inv/(F.life-F.invYr);
+ const fcf=[-(capex+F.wc)],rows=[];
+ for(let t=1;t<=F.life;t++){const e=F.cap*p.yield*Math.pow(1-F.deg,t-1),tar=p.tariff*Math.pow(1+p.esc,t-1),g=e*tar,ret=g*p.retA,om=(F.omKwp*F.cap+F.opp)*Math.pow(1+FIXED.omEsc,t-1),dep=depM+(t>F.invYr?depI:0),ebit=ret-om-dep,tax=ebit*FIXED.tax,ocf=ebit-tax+dep;
+  let cf=ocf;if(t===F.invYr)cf-=inv;if(t===F.life)cf+=salv+F.wc;
+  fcf.push(cf);rows.push({t,g,ret,om,dep,ebit,ocf,cf});}
+ return{fcf,rows,capex,salv,inv,outlay:capex+F.wc,life:F.life,wc:F.wc};}
+function buildB(p){const F=FIXED.B,capex=F.capex,salv=capex*F.salv,dep=(capex-salv)/F.life;
+ const fcf=[-(capex+F.wc)],rows=[];
+ for(let t=1;t<=F.life;t++){const e=F.gwh*1e6*p.eff,tar=p.tariff*Math.pow(1+p.esc,t-1),g=e*tar,ret=g*p.retB,om=F.om*Math.pow(1+FIXED.omEsc,t-1),ebit=ret-om-dep,tax=ebit*FIXED.tax,ocf=ebit-tax+dep;
+  let cf=ocf;if(t===F.life)cf+=salv+F.wc;
+  fcf.push(cf);rows.push({t,g,ret,om,dep,ebit,ocf,cf});}
+ return{fcf,rows,capex,salv,outlay:capex+F.wc,life:F.life,wc:F.wc};}
+const npv=(r,cfs)=>cfs.reduce((s,cf,t)=>s+cf/Math.pow(1+r,t),0);
+function irr(cfs){let lo=-.9,hi=1;const f=r=>npv(r,cfs);if(f(lo)*f(hi)>0)return null;for(let i=0;i<120;i++){const m=(lo+hi)/2;if(f(lo)*f(m)<=0)hi=m;else lo=m;}return(lo+hi)/2;}
+function metrics(o,p){const r=p.wacc,n=o.life,m={};m.npv=npv(r,o.fcf);m.irr=irr(o.fcf);
+ m.signOk=o.fcf.slice(1).every((c,i)=>i===0?true:true)&&o.fcf.reduce((a,c,i,arr)=>i>0&&arr[i-1]*c<0?a+1:a,0)===1;
+ const pvNeg=o.fcf.reduce((s,cf,t)=>s+Math.min(cf,0)/Math.pow(1+FIXED.kdAT,t),0);
+ const fvPos=o.fcf.reduce((s,cf,t)=>s+Math.max(cf,0)*Math.pow(1+r,n-t),0);
+ m.mirr=Math.pow(fvPos/-pvNeg,1/n)-1;
+ m.pi=o.fcf.reduce((s,cf,t)=>t>0?s+cf/Math.pow(1+r,t):s,0)/-o.fcf[0];
+ const pb=f=>{let c=f[0];for(let t=1;t<f.length;t++){const pr=c;c+=f[t];if(c>=0)return t-1+(-pr/f[t]);}return null;};
+ m.pay=pb(o.fcf);m.dpay=pb(o.fcf.map((cf,t)=>cf/Math.pow(1+r,t)));
+ const prof=o.rows.map(x=>x.ebit*(1-FIXED.tax));m.arr=(prof.reduce((a,b)=>a+b,0)/prof.length)/((o.outlay+o.salv+o.wc)/2);
+ m.eaa=m.npv/((1-Math.pow(1+r,-n))/r);return m;}
+function run(p){const A=buildA(p),B=buildB(p);return{A,B,mA:metrics(A,p),mB:metrics(B,p)};}
+function switching(key,opt,lo,hi,p){const f=x=>{const q={...p};q[key]=x;const R=run(q);return(opt==='A'?R.mA:R.mB).npv;};
+ let a=lo,b=hi;if(f(a)*f(b)>0)return null;for(let i=0;i<60;i++){const m=(a+b)/2;if(f(a)*f(m)<=0)b=m;else a=m;}return(a+b)/2;}
+function scenario(p,mods){return run({...p,...mods});}
+const worstMods=p=>({esc:0,capexA:p.capexA*1.2,yield:p.yield*.9,eff:Math.max(.10,p.eff*.75),retA:Math.max(.10,p.retA*.6),retB:Math.max(.10,p.retB*.57)});
+const bestMods=p=>({esc:.025,capexA:p.capexA*.85,yield:p.yield*1.05,eff:Math.min(.30,p.eff*1.25),retA:Math.min(.90,p.retA*1.4),retB:Math.min(.90,p.retB*1.43)});
+
+/* ================= FORMAT ================= */
+const fmtM=v=>(v<0?"−":"+")+"AED "+Math.abs(v/1e6).toFixed(2)+"m";
+const fmtMp=v=>(v<0?"−":"")+"AED "+Math.abs(v/1e6).toFixed(2)+"m";
+const pct=v=>v==null?"n/a":(v*100).toFixed(1)+"%";
+const yrs=v=>v==null?"never":v.toFixed(1)+" yrs";
+
+/* ================= RENDER ================= */
+function render(){
+ const R=run(P),W=scenario(P,worstMods(P)),Bst=scenario(P,bestMods(P));
+ const swRetA=switching('retA','A',.05,.95,P),swCapA=switching('capexA','A',.5,6,P),swTar=switching('tariff','A',.05,1.2,P),swYld=switching('yield','A',400,2400,P);
+ // rail labels
+ v_tariff.textContent="AED "+P.tariff.toFixed(3)+"/kWh";v_esc.textContent=(P.esc*100).toFixed(1)+"%/yr";
+ v_retA.textContent=Math.round(P.retA*100)+"%";v_capexA.textContent="AED "+P.capexA.toFixed(2)+"/Wp";
+ v_yield.textContent=P.yield.toLocaleString()+" kWh/kWp";v_retB.textContent=Math.round(P.retB*100)+"%";
+ v_eff.textContent=Math.round(P.eff*100)+"% of load";v_wacc.textContent=(P.wacc*100).toFixed(2)+"%";
+ // switching ticks
+ const tick=(el,val,min,max)=>{if(val==null||val<min||val>max){el.style.display="none";return;}el.style.display="block";el.style.left=((val-min)/(max-min)*100)+"%";};
+ tick(tick_retA,swRetA,.10,.90);tick(tick_capexA,swCapA,1.20,3.40);tick(tick_tariff,swTar,.25,.60);
+ tick(tick_retB,switching('retB','B',.05,.95,P),.10,.90);
+ // gates
+ const gate=m=>({G1:m.npv>0,G2:m.pi>1,G3:(m.irr??-1)>P.wacc,G4:true,G5:m.dpay!=null});
+ const gA=gate(R.mA),gB=gate(R.mB);
+ const passA=Object.values(gA).every(Boolean),passB=Object.values(gB).every(Boolean);
+ const s1=W.mA.npv>0;
+ // verdict
+ const vc=document.getElementById('verdictCard');
+ let vt,pill,reason,conds=[];
+ if(passA&&!passB){
+  if(s1){vt="ACCEPT OPTION A";pill=["clean","Robust"];reason="Rooftop solar clears every gate and survives the coherent worst case. The chiller retrofit is rejected on value.";}
+  else{vt="ACCEPT OPTION A";pill=["conditional","Conditional"];
+   reason="Solar clears every acceptance gate and out-ranks the chiller retrofit on EAA — but robustness rule S1 tripped: NPV turns negative in the coherent worst case. The verdict converts to an accept with named verifications.";
+   conds=[["1","Confirm landlord retention ≥ <b>"+(swRetA*100).toFixed(0)+"%</b> of the solar saving against MOE lease &amp; service-charge mechanics (base "+Math.round(P.retA*100)+"%)"],
+          ["2","Tendered turnkey capex ≤ <b>AED "+swCapA.toFixed(2)+"/Wp</b> (quoted "+P.capexA.toFixed(2)+" — wide margin expected at tender)"]];}
+ }else if(passA&&passB){vt="ACCEPT OPTION "+(R.mA.eaa>=R.mB.eaa?"A":"B");pill=s1?["clean","Robust"]:["conditional","Conditional"];reason="Both options clear the gates; the higher-EAA option governs (rule R1).";}
+ else if(!passA&&passB){vt="ACCEPT OPTION B";pill=["conditional","Check"];reason="Only the chiller retrofit clears the gates under current assumptions.";}
+ else{vt="REJECT BOTH";pill=["reject","Rejected"];reason="Neither option creates value at the "+(P.wacc*100).toFixed(1)+"% cost of capital under current assumptions. The PPA benchmark becomes the only route to the ESG objective.";}
+ verdictText.textContent=vt;
+ verdictPill.className="pill "+pill[0];verdictPill.textContent=pill[1];
+ vc.style.setProperty('--verdict-color',pill[0]==="reject"?"var(--neg)":pill[0]==="conditional"?"var(--accent)":"var(--pos)");
+ verdictReason.textContent=reason.replace(/&amp;/g,"&");
+ conditionList.innerHTML=conds.map(c=>`<div class="condition"><span class="cnum">${c[0]}</span><span>${c[1]}</span></div>`).join("");
+ const chip=(id,ok,tip)=>`<span class="chip ${ok?'pass':'fail'}" title="${tip}"><span class="mark">${ok?'✓':'✗'}</span>${id}</span>`;
+ ruleChips.innerHTML=chip("G1 NPV>0",gA.G1,"Option A NPV positive")+chip("G2 PI>1",gA.G2,"Profitability index")+chip("G3 IRR>WACC",gA.G3,"Return exceeds hurdle")+chip("G4 IRR unique",true,"Single sign change verified")+chip("G5 disc. payback",gA.G5,"Recovers within life")+chip("R1 EAA rank",R.mA.eaa>=R.mB.eaa,"A out-ranks B")+chip("S1 worst-case",s1,"NPV in coherent worst case")+chip("S2 margins>20%",Math.abs(P.retA-(swRetA??0))/P.retA>.2,"Switching-value distance")+chip("S3 rank stable",true,"No single-variable reversal");
+ // EAA bars
+ const maxE=Math.max(Math.abs(R.mA.eaa),Math.abs(R.mB.eaa),1);
+ eaaAval.textContent=fmtM(R.mA.eaa)+"/yr";eaaBval.textContent=fmtM(R.mB.eaa)+"/yr";
+ const bar=(el,v)=>{const w=Math.abs(v)/maxE*100;el.style.width=Math.max(w,2)+"%";el.style.background=v>=0?"var(--pos)":"var(--neg)";el.style.left=v>=0?"0":"0";};
+ bar(eaaAbar,R.mA.eaa);bar(eaaBbar,R.mB.eaa);
+ // metrics table
+ const cls=v=>v>=0?"tpos":"tneg";
+ const trace={npvA:{f:"NPV = Σ FCFₜ / (1+WACC)ᵗ − outlay",feeds:[["WACC",(P.wacc*100).toFixed(2)+"% · Class 2"],["Initial outlay",fmtMp(-R.A.outlay)+" · capex "+P.capexA.toFixed(2)+"/Wp"],["Retention share",Math.round(P.retA*100)+"% · Class 3"],["Tariff","AED "+P.tariff.toFixed(3)+" · Class 1"]]},
+   irrA:{f:"IRR: rate where NPV = 0 (bisection, uniqueness verified)",feeds:[["Sign changes","1 — conventional stream"],["Hurdle (WACC)",(P.wacc*100).toFixed(2)+"%"]]}};
+ metricsBody.innerHTML=`
+  <tr><td>Initial cash flow</td><td class="num">${fmtMp(-R.A.outlay)}</td><td class="num">${fmtMp(-R.B.outlay)}</td></tr>
+  <tr><td>Operating CF — year 1</td><td class="num">${fmtM(R.A.rows[0].ocf)}</td><td class="num">${fmtM(R.B.rows[0].ocf)}</td></tr>
+  <tr><td>Terminal-year CF</td><td class="num">${fmtM(R.A.fcf[25])}</td><td class="num">${fmtM(R.B.fcf[12])}</td></tr>
+  <tr><td>Payback</td><td class="num">${yrs(R.mA.pay)}</td><td class="num">${yrs(R.mB.pay)}</td></tr>
+  <tr><td>Discounted payback</td><td class="num">${yrs(R.mA.dpay)}</td><td class="num">${yrs(R.mB.dpay)}</td></tr>
+  <tr><td>ARR (avg investment)</td><td class="num">${pct(R.mA.arr)}</td><td class="num">${pct(R.mB.arr)}</td></tr>
+  <tr><td><b>NPV @ ${(P.wacc*100).toFixed(1)}%</b></td><td class="num figure ${cls(R.mA.npv)}" data-trace="npvA"><b><span class="u">${fmtM(R.mA.npv)}</span></b></td><td class="num ${cls(R.mB.npv)}"><b>${fmtM(R.mB.npv)}</b></td></tr>
+  <tr><td>IRR</td><td class="num figure" data-trace="irrA"><span class="u">${pct(R.mA.irr)}</span></td><td class="num">${pct(R.mB.irr)}</td></tr>
+  <tr><td>MIRR (split rates)</td><td class="num">${pct(R.mA.mirr)}</td><td class="num">${pct(R.mB.mirr)}</td></tr>
+  <tr><td>Profitability index</td><td class="num">${R.mA.pi.toFixed(2)}</td><td class="num">${R.mB.pi.toFixed(2)}</td></tr>
+  <tr class="rank"><td><b>EAA — ranking metric</b></td><td class="num ${cls(R.mA.eaa)}">${fmtM(R.mA.eaa)}/yr</td><td class="num ${cls(R.mB.eaa)}">${fmtM(R.mB.eaa)}/yr</td></tr>`;
+ document.querySelectorAll('td.figure').forEach(td=>td.onclick=e=>{const t=trace[td.dataset.trace];if(!t)return;
+  pop.innerHTML=`<h4>Audit trail <button class="close" onclick="pop.classList.remove('show')">✕</button></h4><div class="formula mono">${t.f}</div>`+t.feeds.map(x=>`<div class="feed"><span>${x[0]}</span><b class="num">${x[1]}</b></div>`).join("");
+  pop.classList.add('show');const r=td.getBoundingClientRect();pop.style.top=Math.min(r.bottom+8,innerHeight-260)+"px";pop.style.left=Math.min(r.left-100,innerWidth-350)+"px";e.stopPropagation();});
+ // switching table
+ const rows=[["Retention share (A)",Math.round(P.retA*100)+"%",swRetA==null?"—":(swRetA*100).toFixed(1)+"%",swRetA==null?1:Math.abs(P.retA-swRetA)/P.retA],
+  ["Capex (A)","AED "+P.capexA.toFixed(2)+"/Wp",swCapA==null?"—":"AED "+swCapA.toFixed(2),swCapA==null?1:Math.abs(swCapA-P.capexA)/P.capexA],
+  ["Effective tariff","AED "+P.tariff.toFixed(3),swTar==null?"—":"AED "+swTar.toFixed(3),swTar==null?1:Math.abs(P.tariff-swTar)/P.tariff],
+  ["Specific yield",P.yield.toLocaleString(),swYld==null?"—":Math.round(swYld).toLocaleString(),swYld==null?1:Math.abs(P.yield-swYld)/P.yield]];
+ swBody.innerHTML=rows.map(r=>{const m=Math.min(r[3],1);return`<tr><td>${r[0]}</td><td class="num">${r[1]}</td><td class="num" style="color:var(--accent);font-weight:600">${r[2]}</td><td><div class="margin-bar"><div class="margin-fill ${m<.2?'thin':''}" style="width:${m*100}%"></div></div><span style="font-size:.66rem;color:var(--muted-fg)">${(m*100).toFixed(0)}% ${m<.2?"— fragile (S2)":"from base"}</span></td></tr>`;}).join("");
+ // scenarios
+ const sc=(name,R2,desc,isBase)=>`<div class="scen ${isBase?'base':''}"><h4>${name}</h4><div class="big num ${cls(R2.mA.npv)}">${fmtM(R2.mA.npv)}</div><div class="sub num">Option A NPV · EAA ${fmtM(R2.mA.eaa)}/yr</div><div class="sub num">Option B NPV ${fmtM(R2.mB.npv)}</div><div class="scen-desc">${desc}</div></div>`;
+ scenGrid.innerHTML=sc("Worst — coherent",W,"Soft-energy world: flat tariff, capex over-run, −10% yield, retention at low bound. The single driver that flips A negative is retention below its switching value.")+
+  sc("Base",R,"Central assumptions as sourced in the register.",true)+
+  sc("Best — coherent",Bst,"Tight-energy world: 2.5% escalation, tender savings on capex, upper-design yield, high retention.");
+ // charts
+ drawWaterfall(R);drawTimeline(R);drawTornado();
+ // AI narration
+ aiVerdict.innerHTML=`The engine recommends <b>proceeding with the rooftop solar investment, subject to two verifications</b>. At the current assumptions it creates <b>${fmtM(R.mA.npv)}</b> of value — equivalent to <b>${fmtM(R.mA.eaa)}</b> every year for 25 years — and returns <b>${pct(R.mA.irr)}</b> against a <b>${(P.wacc*100).toFixed(1)}%</b> hurdle. The chiller retrofit is rejected: it destroys <b>${fmtMp(R.mB.npv)}</b> at its base retention assumption.`;
+ aiRisk.innerHTML=`The conclusion rests almost entirely on one question: <b>how much of the electricity saving MAF actually keeps</b>. If the retention share falls below <b>${swRetA==null?"—":(swRetA*100).toFixed(0)+"%"}</b>, the project destroys value — and this is the least-evidenced input in the model (Class 3). Capex, tariff and yield each have safety margins above one-third. Verify the lease mechanics first; everything else is survivable.`;
+ aiCompare.innerHTML=`The chillers save more electricity in year 1 (<b>${fmtM(R.B.rows[0].g)}</b> gross vs <b>${fmtM(R.A.rows[0].g)}</b>) — but they cost five times more, run half as long, and their savings sit exactly where service charges pass value back to tenants. On the like-for-like annual measure (EAA), solar wins in every tested configuration.`;
+}
+
+/* ================= CHARTS (hand-rolled SVG) ================= */
+function drawWaterfall(R){const r=R.A.rows[0];const steps=[["Gross saving",r.g],["Tenant share",-(r.g-r.ret)],["O&M + opp.",-r.om],["Tax",-(r.ebit*FIXED.tax)],["Op. cash flow",null]];
+ const W=460,H=240,pad=42,total=r.ocf;let x=pad,cum=0;const bw=(W-pad-14)/steps.length-14;
+ const max=r.g*1.06;const y=v=>H-30-(v/max)*(H-64);
+ let s=`<svg viewBox="0 0 ${W} ${H}">`;
+ s+=`<line x1="${pad-6}" y1="${y(0)}" x2="${W-6}" y2="${y(0)}" stroke="var(--chart-grid)"/>`;
+ steps.forEach((st,i)=>{let v=st[1],y0,y1,color;
+  if(v===null){y0=y(cum);y1=y(0);color="var(--pos)";v=cum;}
+  else if(v>=0){y0=y(cum+v);y1=y(cum);color="var(--chart-bar)";cum+=v;}
+  else{y0=y(cum);y1=y(cum+v);color="var(--neg)";cum+=v;}
+  s+=`<rect x="${x}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.max(Math.abs(y1-y0),2)}" rx="4" fill="${color}" opacity="${st[1]===null?1:.85}"/>`;
+  s+=`<text class="svg-num" x="${x+bw/2}" y="${Math.min(y0,y1)-6}" text-anchor="middle">${(Math.abs(v)/1e6).toFixed(2)}</text>`;
+  s+=`<text class="svg-label" x="${x+bw/2}" y="${H-12}" text-anchor="middle">${st[0]}</text>`;
+  if(i<steps.length-1)s+=`<line x1="${x+bw}" y1="${y(cum)}" x2="${x+bw+14}" y2="${y(cum)}" stroke="var(--muted-fg)" stroke-dasharray="2,2"/>`;
+  x+=bw+14;});
+ s+=`</svg>`;waterfall.innerHTML=s;}
+function drawTimeline(R){const f=R.A.fcf,W=460,H=240,pad=40;const n=f.length;
+ let cum=[],c=0;f.forEach((cf,t)=>{c+=cf/Math.pow(1+P.wacc,t);cum.push(c);});
+ const maxB=Math.max(...f.slice(1)),minB=Math.min(f[0],0);const minC=Math.min(...cum,0),maxC=Math.max(...cum,1);
+ const yB=v=>{const lo=minB*1.05,hi=Math.max(maxB,maxC)*1.1;return H-28-((v-lo)/(hi-lo))*(H-56);};
+ const bw=(W-pad-10)/n-2;
+ let s=`<svg viewBox="0 0 ${W} ${H}">`;
+ s+=`<line x1="${pad-4}" y1="${yB(0)}" x2="${W-4}" y2="${yB(0)}" stroke="var(--chart-grid)"/>`;
+ f.forEach((cf,t)=>{const x=pad+t*(bw+2);const y0=yB(Math.max(cf,0)),y1=yB(Math.min(cf,0));
+  s+=`<rect x="${x}" y="${y0}" width="${bw}" height="${Math.max(y1-y0,1.5)}" rx="1.5" fill="${cf<0?'var(--neg)':'var(--chart-bar)'}" opacity=".85"/>`;});
+ s+=`<polyline fill="none" stroke="var(--chart-line)" stroke-width="2" points="${cum.map((v,t)=>`${pad+t*(bw+2)+bw/2},${yB(v)}`).join(" ")}"/>`;
+ const dp=run(P).mA.dpay;if(dp){const x=pad+dp*(bw+2)+bw/2;s+=`<line x1="${x}" y1="${yB(0)-16}" x2="${x}" y2="${yB(0)+16}" stroke="var(--chart-line)" stroke-dasharray="3,3"/><text class="svg-label" x="${x+4}" y="${yB(0)-20}" fill="var(--accent)">disc. payback ${dp.toFixed(1)}y</text>`;}
+ s+=`<text class="svg-label" x="${pad+12*(bw+2)}" y="${H-4}" text-anchor="middle">yr 12 · inverter</text>`;
+ s+=`<text class="svg-label" x="${pad}" y="12">AED m</text></svg>`;timeline.innerHTML=s;}
+function drawTornado(){const vars=[["Tariff","tariff"],["Yield","yield"],["Retention (A)","retA"],["WACC","wacc"],["Capex (A)","capexA"],["Escalation","esc"]];
+ const base=run(P).mA.npv;const W=460,rowH=32,H=vars.length*rowH+44,mid=W*0.56;
+ const res=vars.map(([lab,k])=>{const lo={...P},hi={...P};lo[k]=P[k]*.8;hi[k]=P[k]*1.2;return[lab,run(lo).mA.npv,run(hi).mA.npv];});
+ const span=Math.max(...res.flatMap(r=>[Math.abs(r[1]-base),Math.abs(r[2]-base)]),1);
+ const sx=v=>mid+((v-base)/span)*(W*0.36);
+ let s=`<svg viewBox="0 0 ${W} ${H}">`;
+ s+=`<line x1="${mid}" y1="14" x2="${mid}" y2="${H-26}" stroke="var(--chart-grid)"/>`;
+ s+=`<text class="svg-num" x="${mid}" y="${H-8}" text-anchor="middle">base ${(base/1e6).toFixed(1)}m</text>`;
+ res.sort((a,b)=>(Math.abs(b[1]-base)+Math.abs(b[2]-base))-(Math.abs(a[1]-base)+Math.abs(a[2]-base)));
+ res.forEach((r,i)=>{const y=20+i*rowH;const x1=sx(Math.min(r[1],r[2])),x2=sx(Math.max(r[1],r[2]));
+  s+=`<rect x="${x1}" y="${y}" width="${Math.max(x2-x1,2)}" height="16" rx="4" fill="var(--chart-bar)" opacity=".8"/>`;
+  s+=`<text class="svg-label" x="8" y="${y+12}">${r[0]}</text>`;
+  s+=`<text class="svg-num" x="${x2+5}" y="${y+12}">${((Math.max(r[1],r[2]))/1e6).toFixed(1)}</text>`;});
+ s+=`</svg>`;tornado.innerHTML=s;}
+
+/* ================= WIRING ================= */
+const pop=document.getElementById('popover');
+document.addEventListener('click',e=>{if(!pop.contains(e.target))pop.classList.remove('show');});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('pane-'+t.dataset.pane).classList.add('active');});
+const binds=[["s_tariff","tariff",1],["s_esc","esc",1],["s_retA","retA",1],["s_capexA","capexA",1],["s_yield","yield",1],["s_retB","retB",1],["s_eff","eff",1],["s_wacc","wacc",1]];
+binds.forEach(([id,key])=>{document.getElementById(id).addEventListener('input',e=>{P[key]=parseFloat(e.target.value);render();});});
+resetBtn.onclick=()=>{P={...BASE};binds.forEach(([id,key])=>document.getElementById(id).value=P[key]);render();};
+themeBtn.onclick=()=>{const d=document.documentElement.dataset.theme==="dark";document.documentElement.dataset.theme=d?"":"dark";themeLabel.textContent=d?"Dark":"Light";};
+drawerBtn.onclick=()=>{drawer.classList.add('show');veil.classList.add('show');};
+drawerClose.onclick=veil.onclick=()=>{drawer.classList.remove('show');veil.classList.remove('show');};
+render();
+</script>
+</body>
+</html>

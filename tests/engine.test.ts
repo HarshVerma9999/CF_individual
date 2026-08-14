@@ -3,7 +3,7 @@ import { BASE, run, switching, analyze, npvADecliningBalance } from "../lib/engi
 
 /**
  * Golden values recomputed independently from first principles (fresh arithmetic,
- * scratchpad/independent_check — no code shared with the engine) at the 2026-08-14
+ * verification/independent_check.py — no code shared with the engine) at the 2026-08-14
  * base case: yield 1,721 kWh/kWp (Global Solar Atlas, MOE site, Class 1) and
  * WACC 7.74% (Rf 4.65% @ 14-Aug-26, Damodaran Apr-26 UAE ERP 5.491%, beta 0.6910,
  * kd midpoint 4.4%). These are cross-implementation checks: they validate the
